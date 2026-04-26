@@ -1,5 +1,5 @@
 // src/constants/api.js — базовые URL для API
-export const API_BASE = '/api';
+export const API_BASE = 'https://crm-nurces.onrender.com/api';
 
 export const ENDPOINTS = {
   // Auth
