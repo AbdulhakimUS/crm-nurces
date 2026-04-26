@@ -1,38 +1,26 @@
-// routes/progress.js — маршруты прогресса вакцинации
 const express = require('express');
 const router = express.Router({ mergeParams: true });
 const { body, validationResult } = require('express-validator');
 const authGuard = require('../middleware/authGuard');
-const upload = require('../middleware/upload');
+const { upload, uploadToCloudinary } = require('../middleware/upload');
 const { getDb } = require('../db/database');
 
 router.use(authGuard);
 
-// Проверка что пациент принадлежит текущему клиенту
 function checkOwnership(req, res) {
   const db = getDb();
   const patient = db.prepare('SELECT id FROM patients WHERE id = ? AND client_id = ?').get(req.params.patientId, req.user.id);
-  if (!patient) {
-    res.status(404).json({ message: 'Пациент не найден' });
-    return null;
-  }
+  if (!patient) { res.status(404).json({ message: 'Пациент не найден' }); return null; }
   return patient;
 }
 
-// GET /api/patients/:patientId/progress
 router.get('/', (req, res) => {
   const db = getDb();
-
   if (req.user.role !== 'client') return res.status(403).json({ message: 'Только для клиентов' });
-
   try {
     const patient = checkOwnership(req, res);
     if (!patient) return;
-
-    const records = db.prepare(
-      `SELECT * FROM progress_records WHERE patient_id = ? ORDER BY record_date DESC, created_at DESC`
-    ).all(req.params.patientId);
-
+    const records = db.prepare('SELECT * FROM progress_records WHERE patient_id = ? ORDER BY record_date DESC, created_at DESC').all(req.params.patientId);
     return res.json(records);
   } catch (err) {
     console.error('Ошибка получения прогресса:', err);
@@ -40,7 +28,6 @@ router.get('/', (req, res) => {
   }
 });
 
-// POST /api/patients/:patientId/progress — добавить запись
 router.post('/',
   (req, res, next) => {
     if (req.user.role !== 'client') return res.status(403).json({ message: 'Только для клиентов' });
@@ -53,22 +40,23 @@ router.post('/',
     body('description').trim().notEmpty().withMessage('Описание обязательно'),
     body('record_date').notEmpty().withMessage('Дата обязательна')
   ],
-  (req, res) => {
+  async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
-
     const db = getDb();
-
     try {
       const patient = checkOwnership(req, res);
       if (!patient) return;
-
       const { title, vaccine_type, description, record_date } = req.body;
-      const photoPath = req.file ? `uploads/${req.file.filename}` : null;
+      
+      let photoPath = null;
+      if (req.file) {
+        const result = await uploadToCloudinary(req.file.buffer);
+        photoPath = result.secure_url;
+      }
 
       const result = db.prepare(
-        `INSERT INTO progress_records (patient_id, title, vaccine_type, description, photo_path, record_date)
-         VALUES (?, ?, ?, ?, ?, ?)`
+        'INSERT INTO progress_records (patient_id, title, vaccine_type, description, photo_path, record_date) VALUES (?, ?, ?, ?, ?, ?)'
       ).run(req.params.patientId, title, vaccine_type, description, photoPath, record_date);
 
       const record = db.prepare('SELECT * FROM progress_records WHERE id = ?').get(result.lastInsertRowid);
