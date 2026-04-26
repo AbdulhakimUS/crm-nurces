@@ -1,8 +1,10 @@
-// src/api/admin.js — запросы администратора
 import axios from 'axios';
 import { ENDPOINTS } from '../constants/api';
 
-const api = axios.create({ withCredentials: true });
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || '',
+  withCredentials: true
+});
 
 export const adminApi = {
   getClients: () => api.get(ENDPOINTS.ADMIN_CLIENTS),
@@ -13,7 +15,6 @@ export const adminApi = {
   changePassword: (data) => api.put(ENDPOINTS.ADMIN_PASSWORD, data),
 };
 
-// src/api/client.js — запросы профиля клиента
 export const clientApi = {
   getProfile: () => api.get(ENDPOINTS.CLIENT_PROFILE),
   updateProfile: (data) => api.put(ENDPOINTS.CLIENT_PROFILE, data),
