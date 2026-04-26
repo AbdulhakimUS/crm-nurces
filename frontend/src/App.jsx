@@ -5,6 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import LoginPage from './pages/LoginPage'
 import AdminLoginPage from './pages/AdminLoginPage'
 import AdminDashboard from './pages/AdminDashboard'
+import ClientDashboard from './pages/ClientDashboard'
 
 function App() {
   return (
@@ -21,7 +22,7 @@ function App() {
           } />
           <Route path="/dashboard/*" element={
             <ProtectedRoute role="client">
-              <div>Dashboard - coming soon</div>
+              <ClientDashboard />
             </ProtectedRoute>
           } />
           <Route path="*" element={<Navigate to="/" />} />
