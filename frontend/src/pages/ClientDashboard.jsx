@@ -258,7 +258,7 @@ function PatientPage() {
               <Card key={r.id} onClick={() => setSelectedRecord(r)} className="cursor-pointer hover:border-blue-400 transition-all">
                 <div className="flex gap-3 items-start">
                   {r.photo_path && (
-                    <img src={"/" + r.photo_path} alt={r.title} className="w-16 h-16 object-cover rounded-lg flex-shrink-0" />
+                    <img src={r.photo_path.startsWith("http") ? r.photo_path : "/" + r.photo_path} alt={r.title} className="w-16 h-16 object-cover rounded-lg flex-shrink-0" />
                   )}
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start mb-1">
@@ -321,7 +321,7 @@ function PatientPage() {
         {selectedRecord && (
           <div className="flex flex-col gap-4">
             {selectedRecord.photo_path && (
-              <img src={"/" + selectedRecord.photo_path} alt={selectedRecord.title} className="w-full h-56 object-cover rounded-lg" />
+              <img src={selectedRecord.photo_path.startsWith("http") ? selectedRecord.photo_path : "/" + selectedRecord.photo_path} alt={selectedRecord.title} className="w-full h-56 object-cover rounded-lg" />
             )}
             <div className="flex justify-between items-center">
               <span className="inline-block text-sm bg-blue-50 dark:bg-blue-900 text-blue-600 dark:text-blue-300 px-3 py-1 rounded-full">{selectedRecord.vaccine_type}</span>
