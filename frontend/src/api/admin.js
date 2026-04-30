@@ -1,25 +1,11 @@
-import axios from 'axios';
-import { ENDPOINTS } from '../constants/api';
-
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '',
-  withCredentials: true
-});
+// src/api/admin.js
+import api from './axios';
 
 export const adminApi = {
-  getClients: () => api.get(ENDPOINTS.ADMIN_CLIENTS),
-  createClient: (data) => api.post(ENDPOINTS.ADMIN_CLIENTS, data),
-  updateClient: (id, data) => api.put(`${ENDPOINTS.ADMIN_CLIENTS}/${id}`, data),
-  deleteClient: (id) => api.delete(`${ENDPOINTS.ADMIN_CLIENTS}/${id}`),
-  getStats: () => api.get(ENDPOINTS.ADMIN_STATS),
-  changePassword: (data) => api.put(ENDPOINTS.ADMIN_PASSWORD, data),
-};
-
-export const clientApi = {
-  getProfile: () => api.get(ENDPOINTS.CLIENT_PROFILE),
-  updateProfile: (data) => api.put(ENDPOINTS.CLIENT_PROFILE, data),
-  updatePhoto: (formData) => api.put(ENDPOINTS.CLIENT_PHOTO, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  }),
-  updateCredentials: (data) => api.put(ENDPOINTS.CLIENT_CREDENTIALS, data),
+  getClients:    ()              => api.get('/admin/clients'),
+  createClient:  (data)          => api.post('/admin/clients', data),
+  updateClient:  (id, data)      => api.put(`/admin/clients/${id}`, data),
+  deleteClient:  (id)            => api.delete(`/admin/clients/${id}`),
+  getStats:      ()              => api.get('/admin/stats'),
+  changePassword:(data)          => api.put('/admin/password', data),
 };

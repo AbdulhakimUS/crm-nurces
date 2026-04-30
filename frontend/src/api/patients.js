@@ -1,31 +1,18 @@
-// src/api/patients.js — запросы для пациентов
-import axios from 'axios';
-import { ENDPOINTS } from '../constants/api';
-
-const api = axios.create({ withCredentials: true });
+// src/api/patients.js
+import api from './axios';
 
 export const patientsApi = {
-  list: (search = '') =>
-    api.get(ENDPOINTS.PATIENTS, { params: search ? { search } : {} }),
-
-  get: (id) =>
-    api.get(ENDPOINTS.patient(id)),
-
-  create: (data) =>
-    api.post(ENDPOINTS.PATIENTS, data),
-
-  update: (id, data) =>
-    api.put(ENDPOINTS.patient(id), data),
-
-  delete: (id) =>
-    api.delete(ENDPOINTS.patient(id)),
-
-  // Прогресс
-  getProgress: (patientId) =>
-    api.get(ENDPOINTS.progress(patientId)),
-
-  addProgress: (patientId, formData) =>
-    api.post(ENDPOINTS.progress(patientId), formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    }),
+  list:        (search = '')       => api.get('/patients', { params: search ? { search } : {} }),
+  get:         (id)                => api.get(`/patients/${id}`),
+  create:      (data)              => api.post('/patients', data),
+  update:      (id, data)          => api.put(`/patients/${id}`, data),
+  delete:      (id)                => api.delete(`/patients/${id}`),
+  getProgress: (patientId)         => api.get(`/patients/${patientId}/progress`),
+  addProgress: (patientId, formData) => api.post(`/patients/${patientId}/progress`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  updateProgress: (patientId, id, formData) => api.put(`/patients/${patientId}/progress/${id}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  deleteProgress: (patientId, id) => api.delete(`/patients/${patientId}/progress/${id}`),
 };

@@ -1,77 +1,107 @@
-// db/database.js — инициализация SQLite базы данных
-const Database = require('better-sqlite3');
-const path = require('path');
+// db/database.js — PostgreSQL подключение
+const { Pool } = require('pg');
 
-const DB_PATH = path.join(__dirname, '..', 'vaccine.db');
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
 
-let db;
-
-function getDb() {
-  if (!db) {
-    db = new Database(DB_PATH);
-    // Включаем WAL-режим для лучшей производительности
-    db.pragma('journal_mode = WAL');
-    // Включаем поддержку внешних ключей
-    db.pragma('foreign_keys = ON');
-    initTables();
+// Тест подключения
+pool.connect((err, client, release) => {
+  if (err) {
+    console.error('❌ Ошибка подключения к PostgreSQL:', err.message);
+  } else {
+    console.log('✅ PostgreSQL подключён');
+    release();
   }
-  return db;
+});
+
+async function initTables() {
+  const client = await pool.connect();
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS admins (
+        id SERIAL PRIMARY KEY,
+        login TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS clients (
+        id SERIAL PRIMARY KEY,
+        login TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        name TEXT,
+        phone TEXT,
+        photo_path TEXT,
+        theme TEXT DEFAULT 'light',
+        language TEXT DEFAULT 'uz',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS patients (
+        id SERIAL PRIMARY KEY,
+        client_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+        full_name TEXT NOT NULL,
+        passport TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        birth_date TEXT,
+        blood_group TEXT,
+        registration_date TEXT NOT NULL,
+        extra_fields TEXT DEFAULT '[]',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS progress_records (
+        id SERIAL PRIMARY KEY,
+        patient_id INTEGER NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+        title TEXT NOT NULL,
+        vaccine_type TEXT NOT NULL,
+        description TEXT NOT NULL,
+        photo_path TEXT,
+        record_date TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    console.log('✅ Таблицы созданы/проверены');
+  } finally {
+    client.release();
+  }
 }
 
-function initTables() {
-  // Таблица администраторов
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS admins (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      login TEXT UNIQUE NOT NULL,
-      password_hash TEXT NOT NULL
-    )
-  `);
-
-  // Таблица клиентов (докторов)
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS clients (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      login TEXT UNIQUE NOT NULL,
-      password_hash TEXT NOT NULL,
-      name TEXT,
-      phone TEXT,
-      photo_path TEXT,
-      theme TEXT DEFAULT 'light',
-      language TEXT DEFAULT 'uz',
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-
-  // Таблица пациентов
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS patients (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      client_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
-      full_name TEXT NOT NULL,
-      passport TEXT NOT NULL,
-      phone TEXT NOT NULL,
-      birth_date TEXT,
-      blood_group TEXT,
-      registration_date TEXT NOT NULL,
-      extra_fields TEXT DEFAULT '[]',
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-
-  // Таблица записей прогресса вакцинации
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS progress_records (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      patient_id INTEGER NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
-      title TEXT NOT NULL,
-      vaccine_type TEXT NOT NULL,
-      description TEXT NOT NULL,
-      photo_path TEXT,
-      record_date TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
+// Хелпер: выполнить запрос
+async function query(sql, params = []) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(sql, params);
+    return result;
+  } finally {
+    client.release();
+  }
 }
 
-module.exports = { getDb };
+// Хелпер: получить одну строку
+async function getOne(sql, params = []) {
+  const result = await query(sql, params);
+  return result.rows[0] || null;
+}
+
+// Хелпер: получить все строки
+async function getAll(sql, params = []) {
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+// Хелпер: вставить и вернуть строку
+async function run(sql, params = []) {
+  const result = await query(sql, params);
+  return result;
+}
+
+module.exports = { pool, initTables, query, getOne, getAll, run };
