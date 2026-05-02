@@ -1,51 +1,44 @@
-// src/hooks/useAuth.js — хук авторизации и контекст пользователя
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { authApi } from '../api/auth';
 import i18n from '../i18n';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+  const [user, setUser]       = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchMe = useCallback(async () => {
-    try {
-      const { data } = await authApi.me();
-      setUser(data);
-      // Применяем язык пользователя
-      if (data.language) i18n.changeLanguage(data.language);
-      // Применяем тему
-      if (data.theme === 'dark') {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-    } catch {
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
+  // Вызывается ТОЛЬКО один раз при монтировании
   useEffect(() => {
-    fetchMe();
-  }, [fetchMe]);
+    let cancelled = false;
+    authApi.me()
+      .then(({ data }) => {
+        if (cancelled) return;
+        setUser(data);
+        if (data.language) i18n.changeLanguage(data.language);
+        if (data.theme === 'dark') document.documentElement.classList.add('dark');
+        else document.documentElement.classList.remove('dark');
+      })
+      .catch(() => {
+        if (!cancelled) setUser(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []); // пустой массив — только один раз!
 
   const login = async (loginVal, password) => {
     const { data } = await authApi.login(loginVal, password);
     setUser(data);
     if (data.language) i18n.changeLanguage(data.language);
-    if (data.theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    if (data.theme === 'dark') document.documentElement.classList.add('dark');
+    else document.documentElement.classList.remove('dark');
     return data;
   };
 
   const logout = async () => {
-    await authApi.logout();
+    try { await authApi.logout(); } catch {}
     setUser(null);
     document.documentElement.classList.remove('dark');
   };
@@ -58,6 +51,15 @@ export function AuthProvider({ children }) {
       if (updates.language) i18n.changeLanguage(updates.language);
       return updated;
     });
+  };
+
+  const fetchMe = async () => {
+    try {
+      const { data } = await authApi.me();
+      setUser(data);
+    } catch {
+      setUser(null);
+    }
   };
 
   return (
