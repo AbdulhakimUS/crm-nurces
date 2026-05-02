@@ -1,20 +1,18 @@
 // src/api/axios.js — единый axios instance
-import axios from 'axios';
-import { API_BASE } from '../constants/api';
+import api from './axios';
 
 const api = axios.create({
-  baseURL: API_BASE,
+  baseURL: import.meta.env.VITE_API_BASE || 'https://crm-nurces.onrender.com/api',
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' }
 });
 
-// Перехватчик ответов — при 401 редиректим на логин
+// Перехватчик — НЕ делаем автоматический редирект
+// Пусть каждый компонент сам обрабатывает 401
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      window.location.href = '/';
-    }
+    // Просто пробрасываем ошибку дальше без редиректа
     return Promise.reject(error);
   }
 );
