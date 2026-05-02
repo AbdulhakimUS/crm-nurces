@@ -8,28 +8,27 @@ export function AuthProvider({ children }) {
   const [user, setUser]       = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Вызывается ТОЛЬКО один раз при монтировании
   useEffect(() => {
-    let cancelled = false;
+    const token = localStorage.getItem('token');
+    if (!token) { setLoading(false); return; }
+
     authApi.me()
       .then(({ data }) => {
-        if (cancelled) return;
         setUser(data);
         if (data.language) i18n.changeLanguage(data.language);
         if (data.theme === 'dark') document.documentElement.classList.add('dark');
         else document.documentElement.classList.remove('dark');
       })
       .catch(() => {
-        if (!cancelled) setUser(null);
+        localStorage.removeItem('token');
+        setUser(null);
       })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, []); // пустой массив — только один раз!
+      .finally(() => setLoading(false));
+  }, []);
 
   const login = async (loginVal, password) => {
     const { data } = await authApi.login(loginVal, password);
+    if (data.token) localStorage.setItem('token', data.token);
     setUser(data);
     if (data.language) i18n.changeLanguage(data.language);
     if (data.theme === 'dark') document.documentElement.classList.add('dark');
@@ -39,6 +38,7 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try { await authApi.logout(); } catch {}
+    localStorage.removeItem('token');
     setUser(null);
     document.documentElement.classList.remove('dark');
   };
@@ -58,6 +58,7 @@ export function AuthProvider({ children }) {
       const { data } = await authApi.me();
       setUser(data);
     } catch {
+      localStorage.removeItem('token');
       setUser(null);
     }
   };

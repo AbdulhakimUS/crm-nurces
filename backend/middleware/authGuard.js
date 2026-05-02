@@ -1,8 +1,17 @@
-// middleware/authGuard.js — проверка JWT токена
+// middleware/authGuard.js — поддержка cookie И Bearer token
 const jwt = require('jsonwebtoken');
 
 function authGuard(req, res, next) {
-  const token = req.cookies?.token;
+  // Сначала пробуем Bearer token из заголовка
+  const authHeader = req.headers.authorization;
+  let token = null;
+
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.substring(7);
+  } else {
+    // Потом пробуем cookie
+    token = req.cookies?.token;
+  }
 
   if (!token) {
     return res.status(401).json({ message: 'Unauthorized: токен отсутствует' });

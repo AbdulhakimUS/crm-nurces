@@ -1,4 +1,3 @@
-// routes/auth.js
 require('dotenv').config();
 const express = require('express');
 const router = express.Router();
@@ -15,18 +14,20 @@ const loginLimiter = rateLimit({
   message: { message: 'Слишком много попыток. Попробуйте через минуту.' }
 });
 
-function setAuthCookie(res, payload) {
-  const token = jwt.sign(payload, process.env.JWT_SECRET, {
+function generateToken(payload) {
+  return jwt.sign(payload, process.env.JWT_SECRET, {
     algorithm: 'HS256',
     expiresIn: '30d'
   });
+}
+
+function setAuthCookie(res, token) {
   res.cookie('token', token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     maxAge: 30 * 24 * 60 * 60 * 1000
   });
-  return token;
 }
 
 // POST /api/auth/login
@@ -43,21 +44,21 @@ router.post('/login',
     const { login, password } = req.body;
 
     try {
-      // Ищем в admins
       const admin = await getOne('SELECT * FROM admins WHERE login = $1', [login]);
       if (admin) {
         const match = await bcrypt.compare(password, admin.password_hash);
         if (!match) return res.status(401).json({ message: 'Неверный логин или пароль' });
-        setAuthCookie(res, { id: admin.id, role: 'admin' });
-        return res.json({ role: 'admin', id: admin.id, login: admin.login });
+        const token = generateToken({ id: admin.id, role: 'admin' });
+        setAuthCookie(res, token);
+        return res.json({ role: 'admin', id: admin.id, login: admin.login, token });
       }
 
-      // Ищем в clients
       const client = await getOne('SELECT * FROM clients WHERE login = $1', [login]);
       if (client) {
         const match = await bcrypt.compare(password, client.password_hash);
         if (!match) return res.status(401).json({ message: 'Неверный логин или пароль' });
-        setAuthCookie(res, { id: client.id, role: 'client' });
+        const token = generateToken({ id: client.id, role: 'client' });
+        setAuthCookie(res, token);
         return res.json({
           role: 'client',
           id: client.id,
@@ -65,7 +66,8 @@ router.post('/login',
           name: client.name,
           theme: client.theme,
           language: client.language,
-          photo_path: client.photo_path
+          photo_path: client.photo_path,
+          token
         });
       }
 
