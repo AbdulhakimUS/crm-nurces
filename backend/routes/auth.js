@@ -111,21 +111,3 @@ router.get('/me', authGuard, async (req, res) => {
 });
 
 module.exports = router;
-
-// ВРЕМЕННЫЙ маршрут для сброса пароля — УДАЛИТЬ ПОСЛЕ ИСПОЛЬЗОВАНИЯ
-router.post('/reset-admin', async (req, res) => {
-  const { secret, newPassword } = req.body;
-  if (secret !== 'RESET_SECRET_2026') {
-    return res.status(403).json({ message: 'Forbidden' });
-  }
-  try {
-    const hash = await require('bcrypt').hash(newPassword, 12);
-    await require('../db/database').run(
-      'UPDATE admins SET password_hash = $1 WHERE login = $2',
-      [hash, 'admin']
-    );
-    return res.json({ message: 'Password reset successfully' });
-  } catch (err) {
-    return res.status(500).json({ message: err.message });
-  }
-});
