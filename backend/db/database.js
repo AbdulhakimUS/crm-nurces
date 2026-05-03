@@ -148,3 +148,26 @@ async function run(sql, params = []) {
 }
 
 module.exports = { pool, initTables, query, getOne, getAll, run };
+
+async function migrateColumns() {
+  const client = await pool.connect();
+  try {
+    const migrations = [
+      `ALTER TABLE patients ADD COLUMN IF NOT EXISTS family_id INTEGER REFERENCES families(id) ON DELETE SET NULL`,
+      `ALTER TABLE patients ADD COLUMN IF NOT EXISTS risk_category TEXT DEFAULT 'normal'`,
+      `ALTER TABLE patients ADD COLUMN IF NOT EXISTS height NUMERIC`,
+      `ALTER TABLE patients ADD COLUMN IF NOT EXISTS weight NUMERIC`,
+      `ALTER TABLE patients ADD COLUMN IF NOT EXISTS blood_pressure TEXT`,
+      `ALTER TABLE patients ADD COLUMN IF NOT EXISTS notes TEXT`,
+      `ALTER TABLE patients DROP COLUMN IF EXISTS phone`,
+      `ALTER TABLE patients DROP COLUMN IF EXISTS registration_date`,
+      `ALTER TABLE patients DROP COLUMN IF EXISTS extra_fields`,
+    ];
+    for (const sql of migrations) {
+      try { await client.query(sql); } catch(e) { console.log('Migration skip:', e.message.slice(0,60)); }
+    }
+    console.log('✅ Миграции применены');
+  } finally { client.release(); }
+}
+
+module.exports = { pool, initTables, migrateColumns, query, getOne, getAll, run };

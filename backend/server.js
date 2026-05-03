@@ -4,7 +4,7 @@ const helmet = require('helmet');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const path = require('path');
-const { initTables } = require('./db/database');
+const { initTables, migrateColumns } = require('./db/database');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -12,6 +12,7 @@ const PORT = process.env.PORT || 5000;
 async function startServer() {
   try {
     await initTables();
+    await migrateColumns();
     require('./db/seed');
   } catch (err) {
     console.error('❌ DB init error:', err.message);
