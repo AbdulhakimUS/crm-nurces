@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { authApi } from '../api/auth';
+import i18n from '../i18n/index.js';
 
 const AuthContext = createContext(null);
 
@@ -12,6 +13,10 @@ export function AuthProvider({ children }) {
     else document.documentElement.classList.remove('dark');
   };
 
+  const applyLanguage = (language) => {
+    if (language) i18n.changeLanguage(language);
+  };
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) { setLoading(false); return; }
@@ -19,6 +24,7 @@ export function AuthProvider({ children }) {
       .then(({ data }) => {
         setUser(data);
         applyTheme(data.theme);
+        applyLanguage(data.language);
       })
       .catch(() => { localStorage.removeItem('token'); setUser(null); })
       .finally(() => setLoading(false));
@@ -29,6 +35,7 @@ export function AuthProvider({ children }) {
     if (data.token) localStorage.setItem('token', data.token);
     setUser(data);
     applyTheme(data.theme);
+    applyLanguage(data.language);
     return data;
   };
 
@@ -37,18 +44,20 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('token');
     setUser(null);
     document.documentElement.classList.remove('dark');
+    i18n.changeLanguage('uz');
   };
 
   const updateUser = (updates) => {
     setUser(prev => {
       const updated = { ...prev, ...updates };
       if (updates.theme) applyTheme(updates.theme);
+      if (updates.language) applyLanguage(updates.language);
       return updated;
     });
   };
 
   const fetchMe = async () => {
-    try { const { data } = await authApi.me(); setUser(data); applyTheme(data.theme); }
+    try { const { data } = await authApi.me(); setUser(data); applyTheme(data.theme); applyLanguage(data.language); }
     catch { localStorage.removeItem('token'); setUser(null); }
   };
 

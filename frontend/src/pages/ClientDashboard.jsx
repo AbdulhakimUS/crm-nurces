@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import i18n from '../i18n/index.js';
 import { useAuth } from '../hooks/useAuth';
 import { dashboardApi } from '../api/dashboard';
 import { familiesApi } from '../api/families';
@@ -782,7 +783,7 @@ function PatientsList({ initialRisk, initialVisit, onPatientSelect }) {
 }
 
 // ── VACCINES PAGE ─────────────────────────────────────────
-function VaccinesPage({ onPatientSelect }) {
+function VaccinesPage({ onPatientSelect, onBack }) {
   const [vaccines, setVaccines] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -817,6 +818,7 @@ function VaccinesPage({ onPatientSelect }) {
 
   return (
     <div className="space-y-4">
+      {onBack&&<BackBtn onClick={onBack} label="← Back"/>}
       <h2 className="text-2xl font-black text-gray-900 dark:text-white">Vaccines</h2>
       {vaccines.length===0&&<div className="text-center py-16 text-gray-400"><div className="text-5xl mb-3">💉</div><p className="text-sm">No vaccines recorded</p></div>}
       {overdue.length>0&&(
@@ -1046,7 +1048,7 @@ function ImportPage({ onBack, onDone }) {
 }
 
 // ── PROFILE PAGE ──────────────────────────────────────────
-function ProfilePage({ onExport, onImport }) {
+function ProfilePage({ onExport, onImport, onBack }) {
   const { user, logout, updateUser } = useAuth();
   const [form, setForm] = useState({ name:user?.name||'', phone:user?.phone||'', theme:user?.theme||'light', language:user?.language||'uz' });
   const [pwForm, setPwForm] = useState({ currentPassword:'', newLogin:'', newPassword:'' });
@@ -1062,6 +1064,8 @@ function ProfilePage({ onExport, onImport }) {
       // Apply theme immediately
       if (form.theme==='dark') document.documentElement.classList.add('dark');
       else document.documentElement.classList.remove('dark');
+      // Apply language immediately
+      i18n.changeLanguage(form.language);
       toast.success('Saved!');
     }
     catch { toast.error('Failed'); }
@@ -1083,6 +1087,7 @@ function ProfilePage({ onExport, onImport }) {
 
   return (
     <div className="space-y-4 max-w-lg mx-auto">
+      {onBack&&<BackBtn onClick={onBack} label="← Back"/>}
       {/* Avatar */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
         <div className="flex items-center gap-4">
@@ -1225,8 +1230,8 @@ export default function ClientDashboard() {
         {page==='home'     && <HomeDashboard onNavigate={navigate}/>}
         {page==='families' && <FamiliesList onFamilySelect={openFamily}/>}
         {page==='patients' && <PatientsList initialRisk={pFilter.risk} initialVisit={pFilter.visit} onPatientSelect={(id)=>openPatient(id,'patients')}/>}
-        {page==='vaccines' && <VaccinesPage onPatientSelect={(id)=>openPatient(id,'vaccines')}/>}
-        {page==='profile'  && <ProfilePage onExport={()=>setPage('export')} onImport={()=>setPage('import')}/>}
+        {page==='vaccines' && <VaccinesPage onPatientSelect={(id)=>openPatient(id,'vaccines')} onBack={()=>setPage('home')}/>}
+        {page==='profile'  && <ProfilePage onExport={()=>setPage('export')} onImport={()=>setPage('import')} onBack={()=>setPage('home')}/>}
       </main>
 
       {/* Bottom Nav */}
